@@ -29,3 +29,15 @@ Colorado’s **AI Act**, taking effect in 2026, focuses on “algorithmic discri
 Beyond legislation, the **ISO/IEC 42001** standard provides the international benchmark for AI Management Systems (AIMS). Clause 8 of the standard (“Operation”) explicitly requires **“operational planning and control”**. It is not enough to have a policy on paper; the organization must demonstrate controls at runtime.
 
 Auditors certifying against ISO 42001 will look for evidence of **“continuous monitoring”** and **“anomaly detection”**. The SRG automates compliance with these clauses by acting as the enforcement point for AIMS policies. It bridges the gap between the “paperwork” (the governance strategy) and the “runtime” (the actual agent behavior).
+
+
+## Ethical and Responsible Deployment
+
+SRG is a governance layer. Misuse can still occur if policies are unethical.
+
+Responsible deployment requires:
+
+- Explicit policy constraints aligned with law and consent.
+- Transparent audit logs and incident response.
+- Safe defaults when data quality is insufficient.
+- Prohibitions against claims of guaranteed outcomes.

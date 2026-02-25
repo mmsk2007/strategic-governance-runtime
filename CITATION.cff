@@ -1,9 +1,9 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-  - family-names: "Mohammed"
-    given-names: ""
+  - family-names: "Alkhaldi"
+    given-names: "Eng. Mohammed Mazyad"
     affiliation: "dello.ai, Zillionairs.com, CueSync.co, Halel.co, Clawdeployer.com, Norocrm.com"
 title: "Strategic Governance Runtime (SRG)"
-version: 1.0.0
-date-released: 2024-10-26
+version: 1.1
+date-released: 2025-02-25

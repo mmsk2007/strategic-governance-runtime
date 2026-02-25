@@ -2,6 +2,57 @@
 
 This document provides a detailed look into the architectural foundations of the Strategic Governance Runtime (SRG). The SRG is designed as a stateful, time-aware control plane for governing autonomous AI agents, and its architecture reflects the principles of isolation, performance, and full observability.
 
+## SRG Architecture Overview
+
+SRG is a control plane that sits above an "AI brain" (ML models, RL policies, rules engines, LLM agents). It governs outputs without changing the brain.
+
+### Closed-Loop Runtime
+
+The core of SRG is a closed-loop runtime that governs AI decisions through a five-stage process:
+
+1.  **Observe**: Capture the agent's intent, confidence, context, and any operational constraints.
+2.  **Govern**: Make an immediate decision to allow, deny, constrain, escalate, or halt the proposed action.
+3.  **Attribute**: Link outcomes, which may be immediate or delayed, back to the decisions that caused them.
+4.  **Update**: Adjust the system's state, including trust scores, confidence debt, and operational posture.
+5.  **Decay**: Gradually reduce the impact of past events to allow for recovery and prevent the system from becoming overly conservative.
+
+> **Core principle:** governance must be a closed loop, not a one-time threshold.
+
+```mermaid
+graph TD
+    A[Observe] --> B(Govern);
+    B --> C{Attribute};
+    C --> D[Update];
+    D --> E(Decay);
+    E --> A;
+```
+
+### Components
+
+The SRG is composed of several modular engines, each responsible for a specific aspect of governance:
+
+-   **SRG Governor**: The runtime decision enforcer.
+-   **Policy Engine**: Enforces deterministic hard constraints (the "law" of the system).
+-   **State Store**: A time-aware memory that persists the governance state.
+-   **Decay Engine**: Implements "controlled forgetting" to enable recovery from adverse events.
+-   **Outcome Attribution**: Maps outcomes to the decisions that produced them.
+-   **Verification Layer**: Certifies the integrity of metrics and gates the enforcement of governance rules.
+-   **Reporting Layer**: Provides audit trails, dashboards, and evidence for regulatory compliance.
+
+```mermaid
+graph TD
+    subgraph SRG Control Plane
+        direction LR
+        A[SRG Governor]
+        B[Policy Engine]
+        C[State Store]
+        D[Decay Engine]
+        E[Outcome Attribution]
+        F[Verification Layer]
+        G[Reporting Layer]
+    end
+```
+
 ## The SRG Architecture: A Sidecar Control Plane
 
 The industry has experimented with various architectures for AI safety, including Libraries (SDKs) and Proxies (Gateways). Our research confirms that the **Sidecar Pattern** is the only architecture capable of meeting the rigorous requirements of the SRG.
@@ -38,67 +89,34 @@ graph TD
 
 This architecture provides several key advantages:
 
-- **Isolation:** The Sidecar runs in its own memory space. Even if the agent is "jailbroken" or crashes, the Sidecar remains active and can enforce the "Kill Switch".
-- **Performance:** Communication occurs over the local loopback interface (localhost), resulting in negligible latency (<10ms), far superior to external proxies.
-- **Full Observability:** The Sidecar intercepts all ingress (prompts/observations) and egress (actions/tool calls). It can also monitor system resources (CPU, RAM, File I/O) to detect "runaway" processes.
-- **Polyglot:** The Sidecar works independently of the agent’s language (Python, TypeScript, Rust), avoiding "dependency hell".
+-   **Isolation:** The Sidecar runs in its own memory space. Even if the agent is "jailbroken" or crashes, the Sidecar remains active and can enforce the "Kill Switch".
+-   **Performance:** Communication occurs over the local loopback interface (localhost), resulting in negligible latency (<10ms), far superior to external proxies.
+-   **Full Observability:** The Sidecar intercepts all ingress (prompts/observations) and egress (actions/tool calls). It can also monitor system resources (CPU, RAM, File I/O) to detect "runaway" processes.
+-   **Polyglot:** The Sidecar works independently of the agent’s language (Python, TypeScript, Rust), avoiding "dependency hell".
 
-## The Cognitive Circuit Breaker Architecture
+## Decision Governor: A Minimal Formalism
 
-Unlike standard microservice circuit breakers that trip on network errors (500s), the SRG’s Cognitive Circuit Breaker trips on semantic anomalies.
+SRG computes an effective threshold or decision boundary as a function of state.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Closed
-    Closed --> Open: Tripwire (High Drift/Velocity)
-    Open --> HalfOpen: Cooling Off Period
-    HalfOpen --> Closed: Test Actions OK
-    HalfOpen --> Open: Test Actions Fail
-    state Closed {
-        description: Actions Allowed
-    }
-    state Open {
-        description: Actions Blocked (Safe Mode)
-    }
-    state HalfOpen {
-        description: Limited Test Actions
-    }
+A minimal form:
+
+```
+T_eff = clamp( T_base + A_mode + A_drift + A_debt + A_value + A_regret , [T_min, T_max] )
 ```
 
-- **The Monitor:** The Sidecar continuously analyzes the "semantic distance" between the user’s intent and the agent’s actions using a small, specialized embedding model.
-- **The Tripwire:** If the agent’s actions drift too far from the intent (High Drift Score) or if it enters a repetitive loop (High Velocity Score), the breaker "Opens."
-- **The Open State:** In the Open state, all autonomous actions are blocked. The agent is forced into a "Safe Mode" where it can only communicate with a human operator to request a reset.
-- **The Half-Open State:** After a "cooling off" period (or human intervention), the breaker enters a Half-Open state, allowing a limited number of test actions to verify stability before fully closing.
+Where:
 
-## Core Components: The Engines of Trust
+-   `T_base` is a base threshold from model calibration or a default.
+-   `A_mode` is mode posture adjustment.
+-   `A_drift` increases caution under drift.
+-   `A_debt` increases caution under accumulated debt.
+-   `A_value` adjusts based on profitability or value signals (optional, guarded).
+-   `A_regret` adjusts to penalize blocked winners (false negatives), bounded.
 
-The SRG is composed of several modular engines, each responsible for a specific aspect of governance.
+SRG then governs:
 
-### 6.1 The Confidence Debt Ledger
+-   If `p_final >= T_eff`: **allow**.
+-   Else: **deny or constrain**.
+-   Hard policy vetoes override all.
 
-This component tracks the cumulative risk of the agent’s session.
-
-- **Inputs:** Model perplexity, ensemble disagreement (difference between Model A and Model B outputs), and tool criticality (e.g., "read_file" = Low Risk, "delete_file" = High Risk).
-- **Logic:** `Current_Debt = Previous_Debt + (Action_Risk * (1 - Model_Confidence))`
-- **Enforcement:** If `Current_Debt > Debt_Limit`, the SRG triggers an Intervention Gate.
-
-### 6.2 The Decay Engine
-
-This component enforces the temporal degradation of privilege.
-
-- **Logic:** `Effective_Trust = Base_Trust * e^(-decay_rate * time_since_last_verification)`
-- **Application:** When an agent requests access to a sensitive tool, the Decay Engine checks the Effective_Trust. If it has decayed below the threshold, the agent must re-authenticate its reasoning—effectively proving it hasn’t been hijacked or drifted.
-
-### 6.3 The Policy Engine (OPA/Cedar)
-
-The brain of the SRG is a policy engine (e.g., Open Policy Agent or AWS Cedar). It evaluates every action against the "Corporate Constitution".
-
-- **Policy-as-Code:** Policies are written in a declarative language (Rego/Cedar), ensuring they are version-controlled, auditable, and immutable.
-- **Example Rule:** "Block any database write if the PII confidence score is > 0.5 and the user has not provided explicit consent."
-
-### 6.4 The Adversarial Shield
-
-This component defends against "Jailbreaks" and "Adversarial Poetry."
-
-- **Mechanism:** It uses a specialized, lightweight model (e.g., a BERT classifier or a small Llama guardrail) to scan inputs for attack patterns (e.g., "Ignore previous instructions," payload splitting, Base64 encoding).
-- **Defense-in-Depth:** It employs "Adversarial Entity Mapping" to detect when harmless metaphors are used to disguise malicious intent.
+Telemetry must store raw and clamped adjustments per term.

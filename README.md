@@ -1,24 +1,46 @@
 # Strategic Governance Runtime (SRG)
+## A Production-Grade, Domain-Agnostic Control Plane for Safe AI Autonomy
 
-**The Operating System for Agentic Trust — A stateful, time-aware control plane for governing autonomous AI agents.**
+![License: CC BY-ND 4.0](https://img.shields.io/badge/License-CC%20BY--ND%204.0-lightgrey.svg) ![Version: 1.1](https://img.shields.io/badge/Version-1.1-blue.svg) ![Status: Original Architecture](https://img.shields.io/badge/Status-Original%20Architecture-brightgreen.svg)
 
----
+> **Models predict. SRG governs.**
 
-![License](https://img.shields.io/badge/License-CC%20BY--ND%204.0-lightgrey.svg) ![GitHub stars](https://img.shields.io/github/stars/mmsk2007/strategic-governance-runtime?style=social) ![GitHub forks](https://img.shields.io/github/forks/mmsk2007/strategic-governance-runtime?style=social)
+## Executive Summary
 
-**SRG is a production-grade control plane designed to safely manage the operational risks of autonomous AI agents. It acts as a stateful, time-aware "kernel" for agentic systems, moving beyond stateless input/output filters to provide deep, continuous governance.**
+As artificial intelligence systems move from advisory tools to autonomous actors, a fundamental gap emerges between prediction capability and operational safety. Modern AI systems optimize objectives but lack built-in mechanisms for runtime accountability, temporal memory, and risk governance under uncertainty. This gap becomes acute in high-stakes domains where actions create irreversible consequences.
 
-## Why SRG?
+This paper introduces Strategic Governance Runtime (SRG), a domain-agnostic control plane that governs AI decisions at execution time without modifying the underlying model or agent. SRG operates as an independent, deterministic runtime layer that enforces safety, accountability, and adaptive autonomy through observability, time-aware state, and closed-loop feedback.
 
-The shift from Generative AI (producing information) to Agentic AI (executing actions) fundamentally alters the risk landscape. A hallucination in a chatbot is an embarrassment; a hallucination in an autonomous supply chain agent is a logistical and financial disaster. 
+## Architecture Overview
 
-Current tools are not equipped for this new reality. API gateways and simple guardrails are stateless and blind to the multi-step, time-extended processes of autonomous agents. They cannot detect critical failure modes like **State Desynchronization**, **compounding Confidence Debt**, or **privilege escalation in long-running tasks**.
+### Closed-Loop Runtime
 
-SRG was created to solve this. It provides the architectural foundation for enterprises to scale autonomy without ceding control, ensuring that as agents become more powerful, they also become more reliable and secure.
+```mermaid
+graph TD
+    A[Observe] --> B(Govern);
+    B --> C{Attribute};
+    C --> D[Update];
+    D --> E(Decay);
+    E --> A;
+```
 
-## Architecture Overview: The Governance Sidecar
+### Component Architecture
 
-SRG is implemented as a **Sidecar** container that runs alongside the agent process. This pattern provides process isolation, high performance, and full observability without the latency of a network proxy or the security risks of an in-process library.
+```mermaid
+graph TD
+    subgraph SRG Control Plane
+        direction LR
+        A[SRG Governor]
+        B[Policy Engine]
+        C[State Store]
+        D[Decay Engine]
+        E[Outcome Attribution]
+        F[Verification Layer]
+        G[Reporting Layer]
+    end
+```
+
+### Sidecar Pattern
 
 ```mermaid
 graph TD
@@ -38,83 +60,190 @@ graph TD
     User[User/Client] -- "Ingress" --> SRGProcess
 ```
 
-This design ensures that the governance layer cannot be bypassed or disabled by a compromised or malfunctioning agent.
+### Decision Governor Flow
 
-## Core Components
+```mermaid
+graph TD
+    A[Start] --> B{Policy Veto?};
+    B -- Yes --> C[Deny];
+    B -- No --> D{Shadow Mode?};
+    D -- Yes --> E[Allow & Log];
+    D -- No --> F{Metrics Certified?};
+    F -- No --> G[Allow with Constraints];
+    F -- Yes --> H{Should Intervene?};
+    H -- No --> I[Allow];
+    H -- Yes --> J[Compute T_eff];
+    J --> K{p_final >= T_eff?};
+    K -- Yes --> L[Allow];
+    K -- No --> M[Deny or Constrain];
+```
 
-SRG is built on a set of powerful, modular engines:
+### Intervention Gating Logic
 
-- **Confidence Debt Ledger:** Tracks the cumulative uncertainty of an agent's decisions over time, preventing cascading hallucinations.
-- **Decay Engine:** Enforces the temporal decay of trust and privileges, mitigating risks from session hijacking or agent drift.
-- **Policy Engine:** Uses Policy-as-Code (OPA/Cedar) to enforce the "Corporate Constitution" on every action.
-- **Adversarial Shield:** Defends against prompt injection, jailbreaking, and other adversarial attacks.
-- **Cognitive Circuit Breaker:** Monitors the semantic patterns of an agent's behavior, automatically tripping to prevent infinite loops, runaway costs, and catastrophic failures.
+```mermaid
+stateDiagram-v2
+    [*] --> BaselineOK
+    BaselineOK --> InterventionActive: Baseline performance weak or tail risk high
+    InterventionActive --> BaselineOK: Baseline performance strong or insufficient data
+    InterventionActive --> InterventionActive: High blocked-winner rate disables intervention temporarily
+```
 
-## Intervention Gating
+## Key Concepts
 
-SRG replaces binary blocking with a sophisticated, graduated response system based on real-time risk assessment.
+- **Confidence Debt**: Accumulated penalty from harmful outcomes.
+- **Risk Decay**: Controlled forgetting to enable recovery.
+- **Modes/Posture Control**: Explicit operational modes to regulate autonomy.
+- **Intervention Gating**: Ensures SRG only intervenes when it has a statistical edge.
+- **Observability Contract**: A non-negotiable requirement for tracing, replaying, explaining, and certifying every decision.
 
-| Gate Level | Trigger Condition | SRG Action | Human Involvement |
-|---|---|---|---|
-| **Green** | Debt < 20% | Execute | None |
-| **Yellow** | Debt 20-50% | Execute & Log | Asynchronous Audit |
-| **Orange** | Debt 50-80% | Pause & Ask | User Confirmation |
-| **Red** | Debt > 80% | Block | Supervisor Approval |
-| **Black** | Loop / Attack | Terminate | Incident Response |
+## Modes and Posture Control
 
-## SRG vs. The Alternatives
+| Mode | Description |
+|---|---|
+| `SHADOW` | Observe and log only |
+| `BOOTSTRAP` | Minimal enforcement, high caution |
+| `NORMAL` | Standard governance with moderate constraints |
+| `AGGRESSIVE` | Selective growth posture (still governed) |
+| `DEFENSIVE` | Tail-risk suppression posture |
+| `QUARANTINE` | Restrict actions, allow only safe operations |
+| `HALT` | Stop actions entirely |
+
+## The SRG Interface Contract
+
+### Inputs (Per Decision)
+
+- `proposed_action`
+- `model_score_raw`
+- `final_probability`
+- `context`
+- `constraints`
+- `metadata`
+
+### Outputs (Per Decision)
+
+- `final_decision`
+- `constraints_applied`
+- `explanation_code`
+- `decision_id`
+- `debug_trace`
+
+## Hierarchical Explanation Codes
+
+- **L1 Hard Stop**: Non-negotiable policy violation.
+- **L2 Trust Stop**: Low trust, high debt, or repeated misbehavior.
+- **L3 Environment Stop**: Detected drift or unsafe regime.
+- **L4 Constraint**: Allowed but restricted.
+- **L5 Informational**: Governance metadata.
+
+## Decision Governor Formula
+
+```
+T_eff = clamp(T_base + A_mode + A_drift + A_debt + A_value + A_regret, [T_min, T_max])
+```
+
+## Comparison Tables
+
+### SRG vs. Traditional Guardrails
 
 | Feature | API Gateway / Proxy | Python Library (Guardrails AI) | Strategic Governance Runtime (SRG) |
 |---|---|---|---|
-| **Architecture** | Network Edge | In-Process | **Sidecar / Kernel** |
-| **Latency** | High (300ms+) | Low (<10ms) | **Low (<10ms)** |
-| **Security** | Medium (Ingress/Egress) | Low (Bypassable) | **High (Process Isolation)** |
-| **State Awareness** | Stateless | Stateless | **Stateful (Confidence Debt)** |
-| **Intervention** | Block/Allow | Retry | **Graduated Gating & Circuit Breaking** |
-| **Drift Mgmt** | None | None | **Risk Decay Engine** |
-| **Compliance** | Basic Logging | Input Validation | **EU AI Act Art 14 / ISO 42001** |
+| Architecture | Network Edge | In-Process | **Sidecar / Kernel** |
+| Latency | High (300ms+) | Low (<10ms) | **Low (<10ms)** |
+| Security | Medium | Low (Bypassable) | **High (Process Isolation)** |
+| State Awareness | Stateless | Stateless | **Stateful (Confidence Debt)** |
+| Intervention | Block/Allow | Retry | **Graduated Gating & Circuit Breaking** |
 
-## Performance
+### Intervention Gating Hierarchy
 
-By running on the local loopback interface, the SRG Sidecar offers massive performance gains over traditional network proxies.
-
-| Metric | External Gateway (e.g. Kong) | SRG Sidecar (Localhost) | Improvement |
+| Gate Level | Trigger Condition | SRG Action | Human Involvement |
 |---|---|---|---|
-| **TTFT (Time to First Token)** | ~550ms | ~15ms | **35x Faster** |
-| **P99 Latency** | 1200ms | 50ms | **24x Faster** |
-| **Throughput** | 1000 RPS | 5000+ RPS | **5x Capacity** |
+| Green | Debt < 20% | Execute | None |
+| Yellow | Debt 20-50% | Execute & Log | Asynchronous Audit |
+| Orange | Debt 50-80% | Pause & Ask | User Confirmation |
+| Red | Debt > 80% | Block | Supervisor Approval |
+| Black | Loop / Attack | Terminate | Incident Response |
 
-## Implementation Phases
+### Latency Benchmarks
 
-Deploying SRG is a non-disruptive, phased process:
+| Metric | External Gateway | SRG Sidecar | Improvement |
+|---|---|---|---|
+| TTFT | ~550ms | ~15ms | **35x Faster** |
+| P99 Latency | 1200ms | 50ms | **24x Faster** |
+| Throughput | 1000 RPS | 5000+ RPS | **5x Capacity** |
 
-1.  **Shadow Mode:** Observe and baseline agent behavior without blocking actions.
-2.  **Canary Enforcement:** Enable active governance for a small subset of low-risk agents.
-3.  **Active Governance:** Roll out full enforcement across all production agents.
+## Domain Applicability
 
-## Case Studies: Why This Matters
+SRG is applicable to any system with actions, confidence signals, context, constraints, and outcomes. Examples include algorithmic trading, voice AI agents, autonomous operations, and compliance for LLM agents.
 
-The principles behind SRG are born from analyzing catastrophic failures in automated systems:
+## Implementation Considerations
 
-- **Knight Capital ($440M loss in 45 mins):** A runaway algorithm that lacked a cognitive circuit breaker.
-- **Zillow Offers ($500M+ loss):** A model that failed to manage confidence debt and adapt to market drift.
-- **The "30k Loop":** An agent stuck in an infinite reasoning loop, highlighting the need for velocity limiters.
+- **Storage**: State store must support idempotent updates.
+- **Determinism**: Decision computation must be reproducible.
+- **Latency**: Policy checks must be fast; heavy analytics must be async.
 
-## Citation
+## Pseudocode
 
-If you use the Strategic Governance Runtime framework in your research, please cite it. The formal citation information is available in the `CITATION.cff` file.
+### Decision Governance
 
-## License
+```
+function SRG_GOVERN(input):
+    if POLICY_VETO(input): return DENY
+    state = LOAD_STATE(scope=input.scope)
+    if state.mode == SHADOW: return ALLOW
+    if not METRICS_CERTIFIED(): return ALLOW_WITH_CONSTRAINTS
+    if not SHOULD_INTERVENE(scope): return ALLOW
+    T_eff = COMPUTE_THRESHOLD(input, state)
+    if input.p_final >= T_eff: return ALLOW
+    else: return DENY_OR_CONSTRAIN
+```
 
-This project is licensed under the **Creative Commons Attribution-NoDerivatives 4.0 International License**. See the [LICENSE](LICENSE) file for details. You are free to share and use the framework, but not to modify and distribute it as your own.
+### Outcome Update
+
+```
+function SRG_UPDATE_OUTCOME(decision_id, outcome):
+    if OUTCOME_ALREADY_APPLIED(decision_id): return
+    state = LOAD_STATE(scope)
+    state = UPDATE_TRUST_DEBT_DRIFT(state, outcome)
+    state = APPLY_DECAY_IF_DUE(state)
+    SAVE_STATE(state)
+    MARK_OUTCOME_APPLIED(decision_id)
+```
+
+## Evaluation Checklist
+
+- [ ] Canonical truth table exists and is complete.
+- [ ] Universe definitions are explicit and consistent.
+- [ ] SQL vs truth-table reconciliation passes.
+- [ ] Telemetry coverage is sufficient and JSON integrity is high.
+- [ ] Decay events verified with correct event types and sanity checks.
+- [ ] Intervention gating prevents degradation relative to baseline executed.
+- [ ] Readiness gates are satisfied on meaningful windows.
+
+## Scope and Non-Guarantees
+
+SRG does not guarantee profitability, model correctness, or performance stability. It is infrastructure for governance, not a replacement for intelligence.
 
 ## Author
 
-SRG was created by **Mohammed**.
+This architecture and framework are authored by:
 
-- **dello.ai** (Voice AI)
-- **Zillionairs.com** (AI Crypto Signals)
-- **CueSync.co** (AI Meeting Copilot)
-- **Halel.co** (Halal Stock Analysis)
-- **Clawdeployer.com** (AI Agent Hosting)
-- **Norocrm.com** (Car Rental CRM)
+**Eng. Mohammed Mazyad Alkhaldi, Saudi Arabia**
+
+This document establishes prior conceptual authorship of the Strategic Governance Runtime (SRG) framework.
+
+### Company Portfolio
+
+- **dello.ai**: Voice AI platform
+- **Zillionairs.com**: AI crypto signals
+- **CueSync.co**: AI meeting copilot
+- **Halel.co**: Halal stock analysis
+- **Clawdeployer.com**: AI assistant hosting
+- **Norocrm.com**: Car rental CRM
+
+## Citation
+
+If you use this framework, please cite it. See `CITATION.cff` for details.
+
+## License
+
+This project is licensed under the **Creative Commons Attribution-NoDerivatives 4.0 International License**. See the [LICENSE](LICENSE) file for details.
