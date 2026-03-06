@@ -242,6 +242,8 @@ This document establishes prior conceptual authorship of the Strategic Governanc
 - **LifeMaster.ai**: Life Agent OS
 - **Swippa.me**: Nearby Marketplace
 
+- **LifeMaster.ai**
+
 ## Citation
 
 If you use this framework, please cite it. See `CITATION.cff` for details.
