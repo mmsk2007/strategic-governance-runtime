@@ -231,16 +231,7 @@ This architecture and framework are authored by:
 
 This document establishes prior conceptual authorship of the Strategic Governance Runtime (SRG) framework.
 
-### Company Portfolio
 
-- **dello.ai**: Voice AI platform
-- **Zillionairs.com**: AI crypto signals
-- **CueSync.co**: AI meeting copilot
-- **Halel.co**: Halal stock analysis
-- **Clawdeployer.com**: AI assistant hosting
-- **Norocrm.com**: Car rental CRM
-- **LifeMaster.ai**: Life Agent OS
-- **Swippa.me**: Nearby Marketplace
 
 
 ## Citation
