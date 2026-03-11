@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {
+      "@srg/types": ["./src/types/index.ts"],
+      "@srg/core": ["./src/core/index.ts"],
+      "@srg/authority": ["./src/authority/index.ts"],
+      "@srg/delegation": ["./src/delegation/index.ts"],
+      "@srg/artifact": ["./src/artifact/index.ts"],
+      "@srg/replay": ["./src/replay/index.ts"],
+      "@srg/arbitration": ["./src/arbitration/index.ts"],
+      "@srg/consistency": ["./src/consistency/index.ts"],
+      "@srg/observability": ["./src/observability/index.ts"],
+      "@srg/provenance": ["./src/provenance/index.ts"],
+      "@srg/adapters": ["./src/adapters/index.ts"],
+      "@srg/layers": ["./src/layers/index.ts"],
+      "@srg/stress": ["./src/stress/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests"]
+}
